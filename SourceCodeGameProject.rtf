@@ -1,0 +1,829 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1036{\fonttbl{\f0\fnil\fcharset0 Courier New;}{\f1\fnil\fcharset0 Calibri;}}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\f0\fs22 #include<stdio.h>\par
+#include<stdlib.h>\par
+#include<string.h>\par
+#include<stdbool.h>\par
+#include<time.h>\par
+#include<math.h>\par
+\par
+// after implementing necessary libraries we define our data structues\par
+typedef struct \{\par
+    int num;\par
+    char name[50];\par
+    int age ;\par
+    int wins;\par
+    int losses;\par
+    int score;\par
+    int consecutiveWins;\par
+\} Player;\par
+\par
+typedef struct element \{\par
+    Player info;\par
+    struct element* next;\par
+\} element;\par
+\par
+typedef struct \{\par
+    element* head;\par
+    element* tail;\par
+\} Queue;\par
+\par
+// structure to store game info\par
+typedef struct\{\par
+    int gameround;\par
+    char roundName[20];\par
+    char Strategy[20];\par
+    // Player 1 info\par
+    int player1Num;\par
+    char player1Name[50];\par
+    int player1Score;\par
+    int player1Wins;\par
+    int player1Losses;\par
+    \par
+    // Player 2 info\par
+    int player2Num;\par
+    char player2Name[50];\par
+    int player2Score;\par
+    int player2Wins;\par
+    int player2Losses;\par
+    \par
+\} Match;\par
+\par
+typedef struct MatchNode \{\par
+    Match matchInfo;\par
+    struct MatchNode* next;\par
+\} MatchNode;\par
+\par
+typedef struct \{\par
+    MatchNode* head;\par
+    MatchNode* tail;\par
+\} MatchList;\par
+\par
+\par
+// function to save the game \par
+void SaveGame(MatchList* ML, int result, int round, Player* p1, Player* p2, int score1, int score2, int strategy) \{\par
+    Match M;\par
+    M.gameround = round;\par
+    if(strategy == 1)\{\par
+        strcpy(M.Strategy, "Digit Sum");\par
+    \} else \{\par
+        strcpy(M.Strategy, "GCD");\par
+    \}\par
+    snprintf(M.roundName, sizeof(M.roundName), "Round %d", round);\par
+\par
+    M.player1Num = p1->num;\par
+    strcpy(M.player1Name, p1->name);\par
+    M.player1Score = score1;\par
+    M.player1Wins = p1->wins;\par
+    M.player1Losses = p1->losses;\par
+    \par
+    M.player2Num = p2->num;\par
+    strcpy(M.player2Name, p2->name);\par
+    M.player2Score = score2;\par
+    M.player2Wins = p2->wins;\par
+    M.player2Losses = p2->losses;\par
+\par
+    MatchNode* newNode = (MatchNode*)malloc(sizeof(MatchNode));\par
+    newNode->matchInfo = M;\par
+    newNode->next = NULL;\par
+    if (ML->tail == NULL) \{\par
+        ML->head = newNode;\par
+        ML->tail = newNode;\par
+    \} else \{\par
+        ML->tail->next = newNode;\par
+        ML->tail = newNode;\par
+    \}\par
+\}\par
+\par
+\par
+void InitMatchList(MatchList* ML) \{\par
+    ML->head = NULL;\par
+    ML->tail = NULL;\par
+\}\par
+\par
+\par
+// Queue functions\par
+void InitQueue(Queue* F) \{\par
+    F->head = NULL;\par
+    F->tail = NULL;\par
+\}\par
+\par
+void Enqueue(Queue* F, Player p) \{\par
+    element* new = (element*)malloc(sizeof(element));\par
+    new->info = p;\par
+    new->next = NULL;\par
+    if (F->tail) \{\par
+        F->tail->next = new;\par
+    \} else \{\par
+        F->head = new;\par
+    \}\par
+    F->tail = new;\par
+\}\par
+\par
+void Dequeue(Queue* F, Player* p) \{\par
+    if (F->head) \{\par
+        element* temp = F->head;\par
+        *p = temp->info;\par
+        F->head = F->head->next;\par
+        if (!F->head) \{\par
+            F->tail = NULL;\par
+        \}\par
+        free(temp);\par
+    \}\par
+\}\par
+\par
+bool IsEmpty(Queue* F) \{\par
+    return F->head == NULL;\par
+\}\par
+\par
+Player HeadQueue(Queue* F) \{\par
+    if (F->head) \{\par
+        return F->head->info;\par
+    \}\par
+    Player emptyPlayer = \{0\};\par
+    return emptyPlayer;\par
+\}\par
+\par
+Player TailQueue(Queue* F) \{\par
+    if (F->tail) \{\par
+        return F->tail->info;\par
+    \}\par
+    Player emptyPlayer = \{0\};\par
+    return emptyPlayer;\par
+\}\par
+\par
+// Game functions : \par
+\par
+// function to create initial players list :\par
+void CreateInitialPlayers(Queue* F, int numPlayers) \{\par
+    for (int i = 1; i <= numPlayers; i++) \{\par
+        Player p;\par
+        p.num = i;\par
+        snprintf(p.name, sizeof(p.name), "Player%d", i);\par
+        p.age = 18 + rand() % 30;\par
+        p.wins = 0;\par
+        p.losses = 0;\par
+        p.score = 0;\par
+        p.consecutiveWins = 0;\par
+        Enqueue(F, p);\par
+    \}\par
+\}\par
+\par
+\par
+// function to generate random numbers\par
+int GenerateRandomNbr() \{\par
+    return 100000 + (rand() % 900000);\par
+\}\par
+\par
+// function to initialize random seed\par
+void InitRandom() \{\par
+    srand(time(NULL));\par
+\}\par
+\par
+\par
+// function to sum digits of a number\par
+int SumDigits(int number) \{\par
+    int sum = 0;\par
+    while (number > 0) \{\par
+        sum += number % 10;\par
+        number /= 10;\par
+    \}\par
+    return sum;\par
+\}\par
+\par
+// function to check win condition of the first strategy\par
+bool CheckWinCondition(int number) \{\par
+    int sum = SumDigits(number);\par
+    return (sum % 5 == 0);\par
+\}\par
+\par
+// function to play a turn using the first strategy\par
+int PlayTurnP1(int* nbr, int* sum) \{\par
+    // we need to store generated number and its sum to display it later\par
+    *nbr = GenerateRandomNbr();\par
+    *sum = SumDigits(*nbr);\par
+    if (CheckWinCondition(*nbr)) \{\par
+        return 1; // Win\par
+    \} else \{\par
+        return 0; // Lose\par
+    \}\par
+\}\par
+// Time functions : \par
+void GetCurrentTime(char* timeStr) \{\par
+    time_t rawtime;\par
+    struct tm* timeinfo;\par
+    \par
+    time(&rawtime);\par
+    timeinfo = localtime(&rawtime);\par
+    \par
+    sprintf(timeStr, "%02d:%02d:%02d", \par
+            timeinfo->tm_hour, \par
+            timeinfo->tm_min, \par
+            timeinfo->tm_sec);\par
+\}\par
+\par
+int parseTime(const char* timeStr, int* hours, int* minutes, int* seconds) \{\par
+    return sscanf(timeStr, "%d:%d:%d", hours, minutes, seconds) == 3;\par
+\}\par
+\par
+void CalculateDuration(const char* startTime, const char* endTime, char* durationStr) \{\par
+    int startH, startM, startS;\par
+    int endH, endM, endS;\par
+    \par
+    if (!parseTime(startTime, &startH, &startM, &startS)) \{\par
+        strcpy(durationStr, "00:00:00");\par
+        return;\par
+    \}\par
+    \par
+    if (!parseTime(endTime, &endH, &endM, &endS)) \{\par
+        strcpy(durationStr, "00:00:00");\par
+        return;\par
+    \}\par
+    \par
+    int startTotalSeconds = startH * 3600 + startM * 60 + startS;\par
+    int endTotalSeconds = endH * 3600 + endM * 60 + endS;\par
+    \par
+    if (endTotalSeconds < startTotalSeconds) \{\par
+        endTotalSeconds += 24 * 3600;\par
+    \}\par
+    \par
+    int totalSeconds = endTotalSeconds - startTotalSeconds;\par
+    int hours = totalSeconds / 3600;\par
+    totalSeconds %= 3600;\par
+    int minutes = totalSeconds / 60;\par
+    int seconds = totalSeconds % 60;\par
+    \par
+    sprintf(durationStr, "%02d:%02d:%02d", hours, minutes, seconds);\par
+\}\par
+\par
+\par
+// function to play a round using the first strategy\par
+int PlayRoundP1(Player* p1, Player* p2, int* score1, int* score2, int round)\{\par
+    int turns = 0;\par
+    int nbr1, nbr2, sum1, sum2;\par
+    char roundStartTime[20], roundEndTime[20], roundDuration[20];\par
+\par
+\par
+    *score1 = 0;\par
+    *score2 = 0; \par
+\par
+    GetCurrentTime(roundStartTime);\par
+    printf("\\n=== ROUND %d - SUM DIGIT STRATEGY ===\\n", round);\par
+    printf("Start Time: %s\\n", roundStartTime);\par
+    printf("Players: %s vs %s\\n", p1->name, p2->name);\par
+    printf("---------------------------------------------\\n");\par
+    \par
+\par
+    while(abs(*score1 - *score2) < 3 && turns < 12)\{\par
+        printf("Turn %d:\\n", turns + 1);\par
+        // Player 1's turn\par
+        *score1 += PlayTurnP1(&nbr1, &sum1);\par
+        printf("%s's generated number : %d , Sum of digits: %d  , score: %d\\n", p1->name, nbr1, sum1, *score1);\par
+        \par
+        // Player 2's turn\par
+        *score2 += PlayTurnP1(&nbr2, &sum2);\par
+        printf("%s's generated number : %d , Sum of digits: %d  , score: %d\\n", p2->name, nbr2, sum2, *score2);\par
+        turns++;\par
+    \}\par
+\par
+    GetCurrentTime(roundEndTime);\par
+    CalculateDuration(roundStartTime, roundEndTime, roundDuration);\par
+\par
+    \par
+    printf("--------------------------------------------\\n");\par
+    printf("ROUND %d COMPLETED!\\n", round);\par
+    printf("End Time: %s\\n", roundEndTime);\par
+    printf("Duration: %s\\n", roundDuration);\par
+    printf("Total turns played: %d\\n", turns);\par
+\par
+    // updating players stats based on the round result\par
+    if(*score1 > *score2)\{\par
+        p1->wins++;\par
+        p2->losses++;\par
+        p1->score = p1->score + *score1;\par
+        p2->score = p2->score + *score2;\par
+        return 1; // Player 1 wins\par
+    \} else if(*score2 > *score1)\{\par
+        p2->wins++;\par
+        p1->losses++;\par
+        p2->score = p2->score + *score2;\par
+        p1->score = p1->score + *score1;\par
+        return 2; // Player 2 wins\par
+    \} else \{\par
+        return 0; // Draw - equality\par
+    \}\par
+\}\par
+\par
+// function to display round results\par
+void DisplayRoundResults(int round, int result, Player* p1, Player* p2) \{\par
+    printf("Results after Round %d:\\n", round);\par
+    if (result == 1) \{\par
+        printf("%s wins the round!\\n", p1->name);\par
+    \} else if (result == 2) \{\par
+        printf("%s wins the round!\\n", p2->name);\par
+    \} else \{\par
+        printf("The round ended in a draw!\\n");\par
+    \}\par
+\}\par
+\par
+// function to update consecutive wins\par
+void ConsecutiveWins(int result, Player* p1, Player* p2) \{\par
+    if (result == 1) \{\par
+        p1->consecutiveWins++;\par
+        p2->consecutiveWins = 0;\par
+    \} else if (result == 2) \{\par
+        p2->consecutiveWins++;\par
+        p1->consecutiveWins = 0;\par
+    \} else \{\par
+        p1->consecutiveWins = 0;\par
+        p2->consecutiveWins = 0;\par
+    \}\par
+\}\par
+\par
+// function to select the next player based on queue priorities\par
+Player SelectNextPlayer(Queue* F, Queue* F1, Queue* F3) \{\par
+    Player p;\par
+    \par
+    // Priority 1: Queue F1\par
+    if(!IsEmpty(F1)) \{\par
+        if(F1->head == F1->tail) \{ // Only one player in F1\par
+            if(!IsEmpty(F)) \{\par
+                Dequeue(F, &p);\par
+                return p;\par
+            \} else \{\par
+                Dequeue(F1, &p);\par
+                return p;\par
+            \}\par
+        \} else \{\par
+            Dequeue(F1, &p);\par
+            return p;\par
+        \}\par
+    \}\par
+\par
+    // Priority 2: Queue F\par
+    if (!IsEmpty(F)) \{\par
+        if(F->head == F->tail) \{ // Only one player in F\par
+            if(!IsEmpty(F3)) \{\par
+                Dequeue(F3, &p);\par
+                return p;\par
+            \} else \{\par
+                Dequeue(F, &p);\par
+                return p;\par
+            \}\par
+        \} else \{\par
+            Dequeue(F, &p);\par
+            return p;\par
+        \}\par
+    \}\par
+\par
+    // Priority 3: Queue F3\par
+    if(!IsEmpty(F3)) \{\par
+        Dequeue(F3, &p);\par
+        if(IsEmpty(F3)) \{ // Was the last player\par
+            p.losses++;\par
+        \}\par
+        return p;\par
+    \}\par
+\par
+    // No players available\par
+    p.num = -1;\par
+    strcpy(p.name, "NO_PLAYER");\par
+    return p;\par
+\}\par
+\par
+\par
+// Forward declarations\par
+void InsertSorted(element** L, Player p);\par
+void Insert(element** L, Player p);\par
+\par
+// function to place players after a round in part 1\par
+void PlacePlayersPart1(Queue* F, Queue* F1, Queue* F3, element** LG, element** LP, int result, Player* p1, Player* p2)\{\par
+    if(result == 1)\{\par
+        if(p1->wins >= 5)\{\par
+            InsertSorted(LG, *p1);\par
+        \}else\{\par
+            if(p1->consecutiveWins >= 3)\{\par
+                Enqueue(F1, *p1);\par
+            \}\par
+        \}\par
+        //loser handling\par
+        if(p2->losses >= 5)\{\par
+            Insert(LP, *p2);\par
+        \}else\{\par
+            if(p2->losses >= 3)\{\par
+                Enqueue(F3, *p2);\par
+            \} else \{\par
+                Enqueue(F, *p2);\par
+            \}\par
+        \}\par
+\par
+    \} else if(result == 2)\{\par
+        if(p2->wins >= 5)\{\par
+            InsertSorted(LG, *p2);\par
+        \}else\{\par
+            if(p2->consecutiveWins >= 3)\{\par
+                Enqueue(F1, *p2);\par
+            \}\par
+        \}\par
+        //loser handling\par
+        if(p1->losses >= 5)\{\par
+            Insert(LP, *p1);\par
+        \}else\{\par
+            if(p1->losses >= 3)\{\par
+                Enqueue(F3, *p1);\par
+            \} else \{\par
+                Enqueue(F, *p1);\par
+            \}\par
+        \}\par
+\par
+    \} else \{ // draw\par
+        Enqueue(F, *p1);\par
+        Enqueue(F, *p2);\par
+    \}\par
+\}\par
+\par
+\par
+// function to insert a player into a list\par
+void Insert(element** L, Player p) \{\par
+    element* temp;\par
+    element* new = (element*)malloc(sizeof(element));\par
+    new->info = p;\par
+    new->next = NULL;\par
+    if (*L == NULL) \{\par
+        *L = new;\par
+    \} else \{\par
+        temp = *L;\par
+        while (temp->next != NULL) \{\par
+            temp = temp->next;\par
+        \}\par
+        temp->next = new;\par
+    \}\par
+\}\par
+\par
+// function to insert a player into a sorted list based on score \par
+void InsertSorted(element** L, Player p) \{\par
+    element* new = (element*)malloc(sizeof(element));\par
+    new->info = p;\par
+    new->next = NULL;\par
+\par
+    if (*L == NULL || (*L)->info.score <= p.score) \{\par
+        new->next = *L;\par
+        *L = new;\par
+    \} else \{\par
+        element* current = *L;\par
+        element* previous = NULL;\par
+        while (current != NULL && current->info.score >= p.score) \{\par
+            previous = current;\par
+            current = current->next;\par
+        \}\par
+        new->next = current;\par
+        if(previous != NULL) \{\par
+            previous->next = new;\par
+        \} else \{\par
+            *L = new;\par
+        \}\par
+    \}\par
+\}\par
+\par
+// function to display top 3 winners from a list\par
+void DisplayWinners(element* L) \{\par
+    element* temp = L;\par
+    int m = 0;\par
+    printf("List of Winners:\\n");\par
+    while (temp != NULL && m < 3) \{\par
+        printf("%d) Player %d: %s, Score: %d, Wins: %d, Losses: %d\\n", m+1, temp->info.num, temp->info.name, temp->info.score, temp->info.wins, temp->info.losses);\par
+        temp = temp->next;\par
+        m++;\par
+    \}\par
+\}\par
+\par
+\par
+// function to check if all queues are empty\par
+bool EmptyQueues(Queue* F, Queue* F1, Queue* F3) \{\par
+    return IsEmpty(F) && IsEmpty(F1) && IsEmpty(F3);\par
+\}\par
+\par
+\par
+// function to display the status of the queues\par
+void DisplayQueueStatus(Queue* F, Queue* F1, Queue* F3, int round) \{\par
+    int countF = 0, countF1 = 0, countF3 = 0;\par
+    element* temp;\par
+\par
+    temp = F->head;\par
+    while (temp != NULL) \{\par
+        countF++;\par
+        temp = temp->next;\par
+    \}\par
+\par
+    temp = F1->head;\par
+    while (temp != NULL) \{\par
+        countF1++;\par
+        temp = temp->next;\par
+    \}\par
+\par
+    temp = F3->head;\par
+    while (temp != NULL) \{\par
+        countF3++;\par
+        temp = temp->next;\par
+    \}\par
+\par
+    printf("After Round %d:\\n", round);\par
+    printf("Main Queue (F) has %d players.\\n", countF);\par
+    printf("Winners Queue (F1) has %d players.\\n", countF1);\par
+    printf("Losers Queue (F3) has %d players.\\n", countF3);\par
+\}\par
+\par
+// function to display the lists of winners and losers\par
+void DisplayLists(element* LG, element* LP) \{\par
+    element* temp;\par
+\par
+    printf("\\n=== LIST OF WINNERS (LG) ===\\n");\par
+    temp = LG;\par
+    if (temp == NULL) \{\par
+        printf("(Empty)\\n");\par
+    \}\par
+    while (temp != NULL) \{\par
+        printf("Player %d: %s, Score: %d, Wins: %d, Losses: %d\\n", temp->info.num, temp->info.name, temp->info.score, temp->info.wins, temp->info.losses);\par
+        temp = temp->next;\par
+    \}\par
+\par
+    printf("\\n=== LIST OF LOSERS (LP) ===\\n");\par
+    temp = LP;\par
+    if (temp == NULL) \{\par
+        printf("(Empty)\\n");\par
+    \}\par
+    while (temp != NULL) \{\par
+        printf("Player %d: %s, Score: %d, Wins: %d, Losses: %d\\n", temp->info.num, temp->info.name, temp->info.score, temp->info.wins, temp->info.losses);\par
+        temp = temp->next;\par
+    \}\par
+    printf("\\n");\par
+\}\par
+\par
+// PART 2 of the game functions :\par
+\par
+// function to compute GCD of two numbers\par
+int GCD(int a, int b) \{\par
+    while (b != 0) \{\par
+        int temp = b;\par
+        b = a % b;\par
+        a = temp;\par
+    \}\par
+    return a;\par
+\}\par
+\par
+\par
+// checking if a digit is in a number\par
+bool DigitInNumber(int digit, int number) \{\par
+    while (number > 0) \{\par
+        if (number % 10 == digit) \{\par
+            return true;\par
+        \}\par
+        number /= 10;\par
+    \}\par
+    return false;\par
+\}\par
+\par
+// function to play a turn using the second strategy\par
+int PlayTurnP2(int* nbra, int* nbrb, int* g) \{\par
+    *nbra = GenerateRandomNbr() % 1000 + 1;\par
+    *nbrb = GenerateRandomNbr() % 1000 + 1;\par
+    *g = GCD(*nbra, *nbrb);\par
+    int temp = *g;\par
+    \par
+    if (temp == 0) \{\par
+        return 0; \par
+    \}\par
+\par
+    do \{\par
+        int digit = temp % 10;\par
+        if (DigitInNumber(digit, *nbra) || DigitInNumber(digit, *nbrb)) \{\par
+            return 1; // Win\par
+        \}\par
+        temp /= 10;\par
+    \} while (temp > 0);\par
+    \par
+    return 0; // Lose\par
+\}\par
+\par
+\par
+// function to play a round using the second strategy\par
+int PlayRoundP2(Player* p1, Player* p2, int* score1, int* score2, int round) \{\par
+    int nbra1, nbrb1, nbra2, nbrb2, g1, g2;\par
+    int turns = 0;\par
+    char roundStartTime[20], roundEndTime[20], roundDuration[20];\par
+\par
+    *score1 = 0;\par
+    *score2 = 0;\par
+\par
+    GetCurrentTime(roundStartTime);\par
+    printf("\\n=== ROUND %d - GCD STRATEGY ===\\n", round);\par
+    printf("Start Time: %s\\n", roundStartTime);\par
+    printf("Players: %s vs %s\\n", p1->name, p2->name);\par
+    printf("---------------------------------------------\\n");\par
+    \par
+    while(abs(*score1 - *score2) < 3 && turns < 16)\{\par
+        turns++;\par
+        printf("Turn %d:\\n", turns);\par
+        \par
+        // Player 1's turn\par
+        *score1 += PlayTurnP2(&nbra1, &nbrb1, &g1);\par
+        printf("%s's generated numbers: %d, %d, GCD: %d, score: %d\\n", \par
+               p1->name, nbra1, nbrb1, g1, *score1);\par
+        \par
+        if (abs(*score1 - *score2) >= 3) break;\par
+        \par
+        // Player 2's turn\par
+        *score2 += PlayTurnP2(&nbra2, &nbrb2, &g2);\par
+        printf("%s's generated numbers: %d, %d, GCD: %d, score: %d\\n", \par
+               p2->name, nbra2, nbrb2, g2, *score2);\par
+    \}\par
+\par
+    GetCurrentTime(roundEndTime);\par
+    CalculateDuration(roundStartTime, roundEndTime, roundDuration);\par
+\par
+    printf("---------------------------------------------\\n");\par
+    printf("ROUND %d COMPLETED!\\n", round);\par
+    printf("End Time: %s\\n", roundEndTime);\par
+    printf("Duration: %s\\n", roundDuration);\par
+    printf("Total turns played: %d\\n", turns);\par
+    printf("---------------------------------------------\\n");\par
+\par
+    if(*score1 > *score2)\{\par
+        p1->wins++;\par
+        p2->losses++;\par
+        p1->score += *score1;\par
+        p2->score += *score2;\par
+        return 1; // Player 1 wins\par
+    \} else if(*score2 > *score1)\{\par
+        p2->wins++;\par
+        p1->losses++;\par
+        p2->score += *score2;\par
+        p1->score += *score1;\par
+        return 2; // Player 2 wins\par
+    \} else \{\par
+        return 0; // Draw\par
+    \}\par
+\}\par
+\par
+\par
+// function to place players after a round in part 2\par
+void PlacePlayersPart2(Queue* F, Queue* F1, Queue* F3, element** LG, element** LP, int result, Player* p1, Player* p2)\{\par
+    if(result == 1)\{\par
+        if(p1->consecutiveWins >= 2)\{\par
+            InsertSorted(LG, *p1);\par
+        \}else\{\par
+            Enqueue(F1, *p1);\par
+        \}\par
+        //loser handling\par
+        if(p2->losses >= 2)\{\par
+            Insert(LP, *p2);\par
+        \}else\{\par
+            Enqueue(F3, *p2);\par
+        \}\par
+\par
+    \} else if(result == 2)\{\par
+        if(p2->consecutiveWins >= 2)\{\par
+            InsertSorted(LG, *p2);\par
+        \}else\{\par
+            Enqueue(F1, *p2);\par
+        \}\par
+        //loser handling\par
+        if(p1->losses >= 2)\{\par
+            Insert(LP, *p1);\par
+        \}else\{\par
+            Enqueue(F3, *p1);   \par
+        \}\par
+\par
+    \} else \{ // draw\par
+        Enqueue(F, *p1);\par
+        Enqueue(F, *p2);\par
+    \}\par
+\}\par
+\par
+// functions to move remaining players from the queues to lists after the end of the game\par
+void MoveQueueToList(Queue* F, element** L) \{\par
+    Player p;\par
+    while (!IsEmpty(F)) \{\par
+        Dequeue(F, &p);\par
+        Insert(L, p);\par
+    \}\par
+\}\par
+\par
+void MoveQueueToSortedList(Queue* F, element** L) \{\par
+    Player p;\par
+    while (!IsEmpty(F)) \{\par
+        Dequeue(F, &p);\par
+        InsertSorted(L, p);\par
+    \}\par
+\}\par
+\par
+\par
+// MAIN ALGORITHM :\par
+int main() \{\par
+\par
+    // Initialization and declaration of needed variables\par
+    Queue F, F1, F3;\par
+    element* LG = NULL;\par
+    element* LP = NULL;\par
+    int numPlayers = 4; // number of players for ex\par
+    int TotalMatchesP1 = 0;\par
+    int TotalMatchesP2 = 0;\par
+    Player p1, p2;\par
+    int result;\par
+    int score1, score2;\par
+    MatchList ML;\par
+    \par
+    InitRandom();\par
+    InitQueue(&F);\par
+    InitQueue(&F1);\par
+    InitQueue(&F3);\par
+    InitMatchList(&ML);\par
+\par
+    // creating initial players and adding them to the main queue F\par
+    CreateInitialPlayers(&F, numPlayers);\par
+    \par
+    // Get initial players\par
+    if (!IsEmpty(&F)) Dequeue(&F, &p1);\par
+    if (!IsEmpty(&F)) Dequeue(&F, &p2);\par
+    \par
+    printf("=== PART 1: DIGIT SUM STRATEGY ===\\n");\par
+    \par
+    int roundNumber = 1;\par
+    while (!EmptyQueues(&F, &F1, &F3) && TotalMatchesP1 < 3 * numPlayers) \{\par
+        printf("\\n--- Round %d ---\\n", roundNumber);\par
+        \par
+        result = PlayRoundP1(&p1, &p2, &score1, &score2, roundNumber);\par
+        DisplayRoundResults(roundNumber, result, &p1, &p2);\par
+        ConsecutiveWins(result, &p1, &p2);\par
+        SaveGame(&ML, result, roundNumber, &p1, &p2, score1, score2, 1);\par
+        PlacePlayersPart1(&F, &F1, &F3, &LG, &LP, result, &p1, &p2);\par
+        DisplayQueueStatus(&F, &F1, &F3, roundNumber);\par
+        DisplayLists(LG, LP);\par
+        \par
+        TotalMatchesP1++;\par
+        roundNumber++;\par
+        \par
+        if (result == 1) \{\par
+            p2 = SelectNextPlayer(&F, &F1, &F3);\par
+        \} else if (result == 2) \{\par
+            p1 = SelectNextPlayer(&F, &F1, &F3);\par
+        \} else \{\par
+            p1 = SelectNextPlayer(&F, &F1, &F3);\par
+            p2 = SelectNextPlayer(&F, &F1, &F3);\par
+        \}\par
+        \par
+        if (p1.num == -1 || p2.num == -1) break;\par
+    \}\par
+\par
+    printf("\\n=== PART 1 COMPLETED ===\\n");\par
+\par
+    // checking if we need to proceed to part 2\par
+\par
+    if(!EmptyQueues(&F, &F1, &F3) && TotalMatchesP1 >= 3 * numPlayers)\{\par
+        printf("\\n=== STRATEGY CHANGE ===\\n");\par
+        printf("=== PART 2: GCD STRATEGY ===\\n");\par
+        \par
+        roundNumber = 1;\par
+        while (!EmptyQueues(&F, &F1, &F3) && TotalMatchesP2 < 2 * numPlayers) \{\par
+            printf("\\n--- Round %d ---\\n", roundNumber);\par
+            \par
+            result = PlayRoundP2(&p1, &p2, &score1, &score2, roundNumber);\par
+            DisplayRoundResults(roundNumber, result, &p1, &p2);\par
+            ConsecutiveWins(result, &p1, &p2);\par
+            SaveGame(&ML, result, roundNumber, &p1, &p2, score1, score2, 2);\par
+            PlacePlayersPart2(&F, &F1, &F3, &LG, &LP, result, &p1, &p2);\par
+            DisplayQueueStatus(&F, &F1, &F3, roundNumber);\par
+            DisplayLists(LG, LP);\par
+            \par
+            TotalMatchesP2++;\par
+            roundNumber++;\par
+            \par
+            p1 = SelectNextPlayer(&F, &F1, &F3);\par
+            p2 = SelectNextPlayer(&F, &F1, &F3);\par
+            \par
+            if (p1.num == -1 || p2.num == -1) break;\par
+        \}\par
+    \}\par
+\par
+    if(TotalMatchesP2 >= 2 * numPlayers)\{\par
+        printf("\\n=== PART 2 ENDED ===\\n");\par
+\par
+        // moving remaining players to lists\par
+        MoveQueueToList(&F, &LP);\par
+        MoveQueueToSortedList(&F1, &LG);\par
+        MoveQueueToList(&F3, &LP);\par
+    \}\par
+\par
+    // displaying final winners\par
+\par
+    printf("\\n=== FINAL RESULTS ===\\n");\par
+    DisplayWinners(LG);\par
+\par
+    printf("\\nGame Over!\\n");\par
+\par
+    return 0;\par
+\}\par
+
+\pard\sa200\sl276\slmult1\f1\lang12\par
+}
+ 
